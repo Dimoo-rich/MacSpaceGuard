@@ -204,7 +204,7 @@ final class MacSpaceGuardCoreTests: XCTestCase {
         let file = elsewhere.appendingPathComponent("not-selected.dmg")
         XCTAssertTrue(manager.createFile(atPath: file.path, contents: Data([1])))
         let modified = try file.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate!
-        let finding = InstallerFinding(url: file, bytes: 1, modificationDate: modified, fileIdentity: FileIdentity(url: file)!, evidence: .cannotIdentify)
+        let finding = InstallerFinding(url: file, bytes: 1, modificationDate: modified, fileIdentity: FileIdentity(url: file)!, evidence: .cannotIdentify("测试文件，不检查包内内容"))
         let result = InstallerTrashService().moveToTrash([finding], from: directory)
         XCTAssertEqual(result.movedFiles, 0)
         XCTAssertTrue(manager.fileExists(atPath: file.path))

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>zh_CN</string>
+    <key>CFBundleExecutable</key>
+    <string>MacSpaceGuard</string>
+    <key>CFBundleIdentifier</key>
+    <string>io.macspaceguard.app</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>MacSpaceGuard</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon.icns</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleSignature</key>
+    <string>????</string>
+    <key>CFBundleShortVersionString</key>
+    <string>0.3.7</string>
+    <key>CFBundleVersion</key>
+    <string>21</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>13.0</string>
+    <key>LSUIElement</key>
+    <true/>
+    <key>NSUserNotificationAlertStyle</key>
+    <string>alert</string>
+    <key>NSDownloadsFolderUsageDescription</key>
+    <string>MSG 需要读取所选文件夹里的 .dmg 和 .pkg 内容，帮助你决定是否移到废纸篓；不会自动删除、运行安装程序或卸载应用。</string>
+</dict>
+</plist>

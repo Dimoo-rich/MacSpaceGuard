@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-package:
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test
+        run: swift test
+      - name: Self-test with temporary fixtures and simulated Trash
+        run: swift run MacSpaceGuardSelfTest
+      - name: Package app
+        run: chmod +x scripts/*.sh && scripts/package_app.sh
+      - name: Create DMG
+        run: scripts/create_dmg.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MacSpaceGuard-unsigned
+          path: dist/MacSpaceGuard.dmg
+          if-no-files-found: error
+
+# 这里只生成预览工件，不自动创建公开 Release。
+# 当前采用零预算路线，DMG 使用临时本地签名，未经 Developer ID 签名或公证。
+# 公开下载安装包之前仍需真实 Trash 与首次安装验收，并披露未经公证的限制。

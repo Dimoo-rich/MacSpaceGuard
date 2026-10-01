@@ -21,7 +21,12 @@ export SWIFTPM_MODULECACHE_OVERRIDE=${SWIFTPM_MODULECACHE_OVERRIDE:-"$PROJECT_DI
 
 BUILD_OPTIONS=(--disable-sandbox -c "$BUILD_CONFIGURATION" --product MacSpaceGuard)
 if [[ "$BUILD_CONFIGURATION" == "release" ]]; then
-  BUILD_OPTIONS+=(-debug-info-format none --enable-experimental-strip-products)
+  BUILD_OPTIONS+=(-debug-info-format none)
+  # This experimental option is not available in every Swift 6 toolchain.
+  SWIFT_BUILD_HELP=$(swift build --help)
+  if [[ "$SWIFT_BUILD_HELP" == *"--enable-experimental-strip-products"* ]]; then
+    BUILD_OPTIONS+=(--enable-experimental-strip-products)
+  fi
 fi
 
 swift build "${BUILD_OPTIONS[@]}"

@@ -2,32 +2,30 @@
 
 [中文](INSTALL.md)
 
-Version 0.3.7 is a preview. Real Trash acceptance and installation on a second Mac remain pending. The repository currently provides source code; no public installer has passed release acceptance yet. These instructions describe the planned downloadable build.
+**1.0.0-beta.1 is a public beta, not stable.** Second-Mac installation, first downloaded launch and minimum-OS compatibility remain pending.
 
-## Requirements
+## Requirements and installation
 
-The target is Apple Silicon Macs. The build deployment minimum is macOS 13, but the supported OS range must still be verified. Intel Macs are not supported. The app UI is currently in Chinese.
+Apple Silicon only; Chinese UI. The build deployment minimum is macOS 13, not a verified compatibility promise. See [acceptance](BETA_1_ACCEPTANCE.md) for the tested environment.
 
-## Installation
+1. Visit [Releases](https://github.com/Dimoo-rich/MacSpaceGuard/releases), find 1.0.0-beta.1 marked Pre-release. No DMG means it has not been published yet.
+2. Download `MSG-1.0.0-beta.1-AppleSilicon.dmg` and `SHA256.txt`. GitHub's Source code archives are not installers.
+3. Open the DMG and drag MacSpaceGuard to Applications. Quit and back up an existing version before replacing it.
+4. Launch from Applications; controls appear in the menu bar, not the Dock.
+5. Notifications and launch-at-login are optional. Scheduled checks default to six hours and never move files.
 
-1. Visit the project's [Releases](https://github.com/Dimoo-rich/MacSpaceGuard/releases). If there is no installer, a downloadable build has not been released yet.
-2. Download `MacSpaceGuard.dmg` from a release's attachments. The automatically generated **Source code** archives are not installers.
-3. Open the DMG and drag MacSpaceGuard to Applications.
-4. Launch it from Applications. Its controls appear in the macOS menu bar; it does not stay in the Dock.
-5. Choose whether to allow local notifications and launch at login. Scheduled checks default to every six hours and never move files.
+## Security prompts
 
-## macOS security prompts
+The build uses ad-hoc signing without Developer ID or Apple notarization. Signature verification is not Apple approval; macOS may block first launch.
 
-The zero-budget build uses ad-hoc signing, without Developer ID or Apple notarization. macOS may block the first launch. This limitation will be disclosed on the download.
+Only if you trust the official download, believe it has not been tampered with and understand the risk, follow [Apple's instructions](https://support.apple.com/en-us/102445) to decide whether to open it. After attempting launch, check System Settings → Privacy & Security for Open Anyway. Availability depends on OS and device management.
 
-Only if you trust the official download, believe it has not been tampered with, and understand the risks, follow [Apple's instructions](https://support.apple.com/en-us/102445) to decide whether to open it: after attempting to launch, check System Settings → Privacy & Security for **Open Anyway**, then confirm. Availability varies with macOS and device management policies.
+Do not disable system-wide protection. If macOS reports malware, damage, or no authorization option, stop and report it rather than forcing removal of restrictions.
 
-Do not disable system-wide protection. If macOS identifies malware, reports a damaged app, or offers no authorization option, stop and report the problem instead of forcibly removing restrictions with terminal commands.
+## First trial, Trash and feedback
 
-## Trash and recovery
+You can test installation and viewing without moving any real files. **All caches are read-only in this beta**, including force-moving. Installer moving requires explicit selection and a second confirmation. Do not concurrently download, modify or replace selected installers. Metadata matching does not authenticate an installer.
 
-MSG moves only selected, confirmed files to Trash. Moving them does not immediately free disk space; review Trash and empty it yourself when appropriate. MSG never empties Trash.
+Moving installers to Trash does not free space immediately. MSG never empties Trash. Review its contents before deciding to empty it. Finder's Put Back may restore files before emptying; restoration does not guarantee undoing prior effects.
 
-Quit related apps before moving their caches. To restore a file before emptying Trash, quit the related app and use Finder's **Put Back** action where available, or restore it to its original path. Recovery does not guarantee undoing effects already experienced by an app. Emptying Trash removes this recovery option.
-
-Report problems in [Issues](https://github.com/Dimoo-rich/MacSpaceGuard/issues), including app and OS versions and reproduction steps. Redact private filenames and paths from screenshots.
+Use the [feedback template](FEEDBACK.md) and [Issues](https://github.com/Dimoo-rich/MacSpaceGuard/issues), or manually send feedback to the publisher. No diagnostic report is automatically generated or uploaded. Redact private filenames and paths.

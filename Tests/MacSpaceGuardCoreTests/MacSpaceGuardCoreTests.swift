@@ -2,6 +2,31 @@ import XCTest
 @testable import MacSpaceGuardCore
 
 final class MacSpaceGuardCoreTests: XCTestCase {
+    func testBetaRejectsEveryCacheRuleWithoutCallingTrashEvenWhenConfirmed() throws {
+        XCTAssertFalse(ReleasePolicy.cacheMovingEnabled)
+        let manager = FileManager.default
+        let home = manager.temporaryDirectory.appendingPathComponent("MSG-beta-readonly-\(UUID().uuidString)", isDirectory: true)
+        try manager.createDirectory(at: home, withIntermediateDirectories: true)
+        defer { try? manager.removeItem(at: home) }
+        let file = home.appendingPathComponent("fixture.bin")
+        XCTAssertTrue(manager.createFile(atPath: file.path, contents: Data([1, 2, 3])))
+        let identity = try XCTUnwrap(FileIdentity(url: file))
+        let reports = CacheScanner.defaultRules.map { rule in
+            CacheAreaReport(rule: rule, rootURL: home.appendingPathComponent(rule.relativePath), cutoffDate: Date(), reclaimableBytes: 3,
+                candidates: [CacheCandidate(url: file, bytes: 3, modificationDate: Date.distantPast, ruleID: rule.id, fileIdentity: identity)])
+        }
+        let cleaner = CleanupService(trashItem: { _ in XCTFail("Beta must never call cache Trash") })
+        let result = cleaner.moveToTrash(reports: reports, homeDirectory: home,
+            runningBundleIdentifiers: Set(CacheScanner.defaultRules.flatMap(\.relatedBundleIdentifiers)),
+            confirmedRunningRuleIDs: Set(CacheScanner.defaultRules.map(\.id)))
+        XCTAssertEqual(result.movedFiles, 0)
+        XCTAssertEqual(result.originalBytes, 0)
+        XCTAssertEqual(result.failures.count, reports.count)
+        XCTAssertTrue(result.failures.allSatisfy { $0.contains(ReleasePolicy.cacheReadOnlyExplanation) })
+        XCTAssertEqual(try Data(contentsOf: file), Data([1, 2, 3]))
+        XCTAssertTrue(cleaner.moveToTrash(reports: []).failures.isEmpty)
+    }
+
     func testParsesSwapUsage() {
         let input = "total = 8192.00M  used = 3177.50M  free = 5014.50M"
         XCTAssertEqual(SystemMonitor.parseSwapUsage(input), 3_331_850_240)
@@ -39,7 +64,7 @@ final class MacSpaceGuardCoreTests: XCTestCase {
         XCTAssertFalse(scanner.isSafeDescendant(sibling, of: root))
     }
 
-    func testCustomCutoffAndRunningAppProtection() throws {
+    func testCustomCutoffAndBetaCacheReadOnlyProtection() throws {
         let fileManager = FileManager.default
         let temporary = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let cache = temporary.appendingPathComponent("Library/Caches/TestCache", isDirectory: true)
@@ -86,9 +111,11 @@ final class MacSpaceGuardCoreTests: XCTestCase {
             runningBundleIdentifiers: ["com.example.running"],
             confirmedRunningRuleIDs: [rule.id]
         )
-        XCTAssertEqual(forced.movedFiles, 1)
-        XCTAssertFalse(fileManager.fileExists(atPath: file.path))
-        XCTAssertTrue(fileManager.fileExists(atPath: fakeTrash.appendingPathComponent(file.lastPathComponent).path))
+        XCTAssertEqual(forced.movedFiles, 0)
+        XCTAssertEqual(forced.originalBytes, 0)
+        XCTAssertTrue(forced.failures.first?.contains(ReleasePolicy.cacheReadOnlyExplanation) == true)
+        XCTAssertTrue(fileManager.fileExists(atPath: file.path))
+        XCTAssertFalse(fileManager.fileExists(atPath: fakeTrash.appendingPathComponent(file.lastPathComponent).path))
     }
 
     func testLogsAreHardBlockedAndRunningRulesBecomeHighRisk() {
@@ -210,7 +237,7 @@ final class MacSpaceGuardCoreTests: XCTestCase {
         XCTAssertTrue(manager.fileExists(atPath: file.path))
     }
 
-    func testCacheCleanupRejectsReplacementWithSameSizeAndDate() throws {
+    func testBetaCacheReadOnlyAlsoRejectsReplacementWithSameSizeAndDate() throws {
         let manager = FileManager.default
         let home = manager.temporaryDirectory.appendingPathComponent("MSG-identity-\(UUID().uuidString)", isDirectory: true)
         let root = home.appendingPathComponent("Library/Caches/TestCache", isDirectory: true)

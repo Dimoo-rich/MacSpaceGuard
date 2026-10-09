@@ -4,63 +4,60 @@
 
 ## 中文说明
 
-MSG 是一个轻量、完全本地运行的 macOS 菜单栏工具，用来监测内存与磁盘状态，并辅助整理白名单中的旧缓存和下载安装包。
+MSG 是一个轻量、完全本地运行的 macOS 菜单栏工具，用来查看内存与磁盘状态、查看白名单旧缓存，以及整理下载的安装包。
 
-**当前版本：0.3.7 预览版。** 1.0 尚未发布，仓库目前提供源码。目标平台为 Apple Silicon（M 系列）Mac，构建最低要求 macOS 13；最低系统和另一台 Mac 的兼容性仍待实测。应用界面目前为中文，暂不支持 Intel。
+**当前构建：1.0.0-beta.1（公开测试版，不是稳定版）。** 目标为 Apple Silicon（M 系列）Mac，界面为中文，不支持 Intel。编译最低版本为 macOS 13，但最低系统和另一台 Mac 尚未实测；请勿将此理解为已验证的 macOS 13+ 兼容性承诺。
 
-### 功能
+### 功能与本次范围
 
-- 菜单栏显示系统内存余量、估算内存使用、交换空间及磁盘剩余量。
-- 自动检查间隔可选 1、3、6、12 小时，默认 6 小时；自动检查只统计。
-- 选择缓存目录与日期，扫描后逐文件选择；支持全选、风险提示及运行中应用的额外确认。
-- 检查所选文件夹第一层的 `.dmg`、`.pkg`，只读查看包内应用标识与版本，并与本机安装情况对照；不会运行安装程序。
-- 用户确认后将所选文件移到废纸篓，不卸载应用，不自动清空废纸篓。
-- 支持本地通知、登录时启动；没有主动上传文件或扫描结果的功能。
+- 查看系统内存余量、估算内存使用、交换空间及磁盘剩余量。
+- 自动检查间隔可选 1、3、6、12 小时，默认 6 小时；只统计，不移动文件。
+- 按类别和日期扫描指定缓存子目录，查看文件路径、大小和风险提示。**此测试版缓存只读，不能移动缓存，也不能强制移动。** 类别“全选”只决定扫描范围。
+- 读取所选文件夹第一层的普通 `.dmg`、`.pkg` 文件，核对包内应用标识与版本；不会运行安装程序。
+- 下载安装包默认不选，支持全选/全不选；只在用户选择并再次确认后移到废纸篓。不卸载应用，也不自动清空废纸篓。
+- 本地通知和登录启动可选；没有主动上传文件或扫描结果的功能。
 
-### 使用边界
+### 下载与安装
 
-清理磁盘缓存不等于释放运行内存。文件修改时间较早也不保证可以安全移除；建议先退出相关应用，查看路径和风险理由再确认。
+到 [Releases](https://github.com/Dimoo-rich/MacSpaceGuard/releases) 查找 **1.0.0-beta.1 / Pre-release** 的 DMG 附件。若没有 DMG，表示下载版尚未发布。GitHub 自动生成的 **Source code** 压缩包不是安装包。
 
-只扫描白名单中的指定缓存子目录，不扫描整个资源库；不处理 `Application Support`、`Containers`、`Logs`、聊天数据库、浏览器密码或文稿。完整范围见[清理范围](docs/CLEANUP_SCOPE.md)。
+此版本仅临时本地签名，**未经 Developer ID 签名或 Apple 公证**，首次打开可能被 macOS 阻止；不保证每台 Mac 都能授权打开。请先阅读[安装说明](docs/INSTALL.md)，不要关闭系统安全保护。
 
-移到废纸篓后仍占用磁盘空间，需要用户自行检查并清空才会释放。清空前可尝试从废纸篓恢复；恢复不保证能撤销应用已经发生的异常。
+### 风险与边界
 
-### 安装与反馈
+只扫描白名单子目录，不扫描整个资源库，不处理 Application Support、Containers、Logs、聊天数据库、浏览器密码或文稿。缓存风险等级是用途提示，不是安全删除保证；缓存移动须待应用使用验证和进一步安全审查后再考虑开放。
 
-当前没有经发布验收的公开安装包。之后的安装包会放在 [Releases](https://github.com/Dimoo-rich/MacSpaceGuard/releases)，下载 DMG，打开后拖入“应用程序”。不要把 GitHub 自动生成的 **Source code** 压缩包当安装包。
+安装包标识匹配不证明来源可信，也不证明已安装应用来自这个包。“未找到”不等于从未安装。扫描和移动期间请勿同时下载、替换或修改所选文件；虽然移动前会校验文件身份、大小和日期，最后检查与系统移动之间仍存在非原子的竞争窗口。
 
-本项目按零预算发布路线准备：使用临时本地签名，暂不办理付费 Developer ID 签名或 Apple 公证。未来提供下载时会明确标注这一点，并说明首次打开可能出现的系统提示。具体流程见[安装说明](docs/INSTALL.md)。
+移到废纸篓仍占用空间，用户自行检查并清空后才会腾出空间；清空前可尝试“放回原处”，但恢复不保证撤销已发生的影响。MSG 不会直接释放运行内存。
 
-反馈请使用 [Issues](https://github.com/Dimoo-rich/MacSpaceGuard/issues)。可提供版本、系统版本和问题步骤，截图请隐去用户名和私人文件名。[隐私说明](docs/PRIVACY.md) · [验收记录与剩余风险](docs/SAFETY_AUDIT.md) · [版本记录](CHANGELOG.md)
+[清理范围](docs/CLEANUP_SCOPE.md) · [隐私说明](docs/PRIVACY.md) · [验收与剩余风险](docs/SAFETY_AUDIT.md) · [版本记录](CHANGELOG.md)
+
+### 反馈
+
+到 [Issues](https://github.com/Dimoo-rich/MacSpaceGuard/issues) 填写版本、M 系列芯片、macOS 版本、操作步骤和完整提示。可参考[反馈模板](docs/FEEDBACK.md)。这是手动反馈，不会自动生成或上传诊断报告。截图请隐去用户名和私人文件名。
 
 ## English
 
-MSG is a lightweight, local-only macOS menu bar app for monitoring memory and disk space, and managing old caches and downloaded installers.
+MSG is a lightweight, local-only macOS menu bar app for monitoring memory and disk space, viewing allowlisted caches, and organizing downloaded installers.
 
-**Current version: 0.3.7 preview.** Version 1.0 is not released. The repository currently provides source code. The target is Apple Silicon Macs, with a macOS 13 deployment minimum; compatibility with the oldest supported OS and a second Mac still needs verification. The app UI is currently in Chinese. Intel Macs are out of scope.
+**Current build: 1.0.0-beta.1 (public beta, not stable).** Apple Silicon only; Chinese UI. The build deployment minimum is macOS 13, but the oldest OS and a second Mac remain untested. This is not a verified macOS 13+ compatibility promise.
 
-### Features
+- Scheduled checks every 1, 3, 6 or 12 hours (default: 6) only report findings.
+- Cache scanning is **read-only** in this beta. No cache selection for deletion, moving, or force-moving is available, including through the core cleanup API.
+- Installer scanning reads metadata from first-level regular DMG/PKG files without running installers.
+- Installer selection starts empty; all/none controls only change selection. Explicit confirmation is required to move files to Trash. MSG never uninstalls apps or empties Trash.
+- No automatic uploads of files or findings.
 
-- Shows memory availability, estimated memory usage, swap usage, and free disk space.
-- Checks every 1, 3, 6, or 12 hours; the default is 6 hours. Scheduled checks only report findings.
-- Reviews allowlisted caches with a date cutoff, explicit file selection, and risk explanations.
-- Inspects `.dmg` and `.pkg` files in the selected folder's top level without executing installers. Compares application metadata with installed applications; matching does not prove installation provenance.
-- Moves selected files to macOS Trash only after confirmation, with extra confirmation for caches associated with running apps.
-- Supports local notifications and launch at login. Does not actively upload files or scan results.
+Look for the beta DMG in [Releases](https://github.com/Dimoo-rich/MacSpaceGuard/releases). No DMG means it has not been published yet. GitHub's **Source code** archives are not installers. The build uses ad-hoc signing without Developer ID or Apple notarization and may be blocked on first launch. Read the [installation guide](docs/INSTALL.en.md).
 
-### Limits and installation
+Bundle-ID matches do not establish installer authenticity or provenance. Not-found does not prove never-installed. Do not concurrently modify selected installers: identity/size/date checks are not atomic with the system Trash operation. Moving to Trash does not immediately free space; users decide whether and when to empty it. Recovery cannot guarantee undoing prior effects.
 
-Removing disk caches does not directly free RAM. Older files may still be in use. The allowlist excludes application data, chat databases, browser credentials, documents, and whole Library directories. Review findings and quit the relevant app before moving its caches.
-
-Moving files to Trash does not immediately free disk space. MSG never empties Trash; users decide when to empty it after reviewing its contents.
-
-There is currently no public installer that has passed release acceptance. Future installers will be attached to [Releases](https://github.com/Dimoo-rich/MacSpaceGuard/releases). GitHub's **Source code** archives are not installers. The zero-budget distribution plan uses ad-hoc signing without Developer ID or Apple notarization; this limitation will be clearly disclosed. See the [English installation guide](docs/INSTALL.en.md).
-
-Report problems through [Issues](https://github.com/Dimoo-rich/MacSpaceGuard/issues). Include the app version, macOS version, and reproduction steps. Remove private names and paths from screenshots before sharing.
+Report problems via [Issues](https://github.com/Dimoo-rich/MacSpaceGuard/issues); redact private filenames and paths. Feedback is manual, not an automatic diagnostic upload.
 
 ## Development / 本地开发
 
-Requires an Apple Silicon Mac and Swift 6 tools. Full XCTest requires Xcode. With Command Line Tools only, the self-test can run using temporary fixtures and a simulated Trash. The existing CI workflow runs tests and packages a preview DMG on a GitHub Mac runner; a successful CI run does not replace real installation and Trash acceptance tests.
+Requires Apple Silicon and Swift 6 tools. Full XCTest requires Xcode; the self-test uses UUID temporary fixtures and simulated Trash, never real caches. CI success does not replace second-Mac installation acceptance.
 
 ```sh
 swift run --disable-sandbox MacSpaceGuardSelfTest
@@ -69,9 +66,7 @@ swift test --disable-sandbox
 ./scripts/create_dmg.sh
 ```
 
-Build output: `dist/.build/MacSpaceGuard.app` and `dist/MacSpaceGuard.dmg`.
-
-If the local compiler and default SDK do not match, set a compatible `SDKROOT`. The packaging script includes a fallback for a known Command Line Tools SDK layout. See [distribution notes](docs/DISTRIBUTION.md) for optional future signing and notarization.
+Build output: `dist/.build/MacSpaceGuard.app` and `dist/MacSpaceGuard.dmg`. See [distribution notes](docs/DISTRIBUTION.md).
 
 ## License
 

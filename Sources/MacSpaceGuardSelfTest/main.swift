@@ -121,10 +121,10 @@ do {
     )
     let refreshedReports = scanner.scan(rules: [rule], homeDirectory: temporary)
     let cleanup = cleaner.moveToTrash(reports: refreshedReports, homeDirectory: temporary)
-    try require(cleanup.movedFiles == 1, "移动文件数量错误")
-    try require(cleanup.originalBytes == 128, "移动文件原大小统计错误")
-    try require(!fileManager.fileExists(atPath: oldFile.path), "旧文件没有移出缓存目录")
-    try require(fileManager.fileExists(atPath: fakeTrash.appendingPathComponent(oldFile.lastPathComponent).path), "旧文件没有进入模拟废纸篓")
+    try require(cleanup.movedFiles == 0 && cleanup.originalBytes == 0, "公开测试版不应移动缓存")
+    try require(cleanup.failures.first?.contains(ReleasePolicy.cacheReadOnlyExplanation) == true, "未说明缓存只读限制")
+    try require(fileManager.fileExists(atPath: oldFile.path), "公开测试版移动了旧缓存")
+    try require(!fileManager.fileExists(atPath: fakeTrash.appendingPathComponent(oldFile.lastPathComponent).path), "缓存进入了模拟废纸篓")
     try require(fileManager.fileExists(atPath: recentFile.path), "错误删除了新文件")
 
     let forceFile = cache.appendingPathComponent("force.bin")
@@ -147,8 +147,8 @@ do {
         runningBundleIdentifiers: ["com.example.running"],
         confirmedRunningRuleIDs: [protectedRule.id]
     )
-    try require(forced.movedFiles == 1 && !fileManager.fileExists(atPath: forceFile.path), "明确确认的运行中缓存没有移出")
-    try require(fileManager.fileExists(atPath: fakeTrash.appendingPathComponent(forceFile.lastPathComponent).path), "运行中缓存没有进入模拟废纸篓")
+    try require(forced.movedFiles == 0 && fileManager.fileExists(atPath: forceFile.path), "额外确认不应绕过测试版缓存只读限制")
+    try require(!fileManager.fileExists(atPath: fakeTrash.appendingPathComponent(forceFile.lastPathComponent).path), "运行中缓存进入了模拟废纸篓")
     try require(fileManager.fileExists(atPath: recentFile.path), "错误移动了未到期文件")
 
     // All destructive checks below use files created inside this test's own

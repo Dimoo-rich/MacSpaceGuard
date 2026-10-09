@@ -2,29 +2,76 @@ import XCTest
 @testable import MacSpaceGuardCore
 
 final class MacSpaceGuardCoreTests: XCTestCase {
-    func testBetaRejectsEveryCacheRuleWithoutCallingTrashEvenWhenConfirmed() throws {
-        XCTAssertFalse(ReleasePolicy.cacheMovingEnabled)
+    func testAllDefaultRulesCanMoveReviewedFixturesAfterRunningConfirmation() throws {
         let manager = FileManager.default
-        let home = manager.temporaryDirectory.appendingPathComponent("MSG-beta-readonly-\(UUID().uuidString)", isDirectory: true)
+        let home = manager.temporaryDirectory.appendingPathComponent("MSG-restored-\(UUID().uuidString)", isDirectory: true)
         try manager.createDirectory(at: home, withIntermediateDirectories: true)
         defer { try? manager.removeItem(at: home) }
-        let file = home.appendingPathComponent("fixture.bin")
-        XCTAssertTrue(manager.createFile(atPath: file.path, contents: Data([1, 2, 3])))
-        let identity = try XCTUnwrap(FileIdentity(url: file))
-        let reports = CacheScanner.defaultRules.map { rule in
-            CacheAreaReport(rule: rule, rootURL: home.appendingPathComponent(rule.relativePath), cutoffDate: Date(), reclaimableBytes: 3,
-                candidates: [CacheCandidate(url: file, bytes: 3, modificationDate: Date.distantPast, ruleID: rule.id, fileIdentity: identity)])
+        let trash = home.appendingPathComponent("FakeTrash", isDirectory: true)
+        try manager.createDirectory(at: trash, withIntermediateDirectories: true)
+        for rule in CacheScanner.defaultRules {
+            let root = home.appendingPathComponent(rule.relativePath, isDirectory: true)
+            try manager.createDirectory(at: root, withIntermediateDirectories: true)
+            let file = root.appendingPathComponent("\(rule.id).bin")
+            XCTAssertTrue(manager.createFile(atPath: file.path, contents: Data([1, 2, 3])))
+            try manager.setAttributes([.modificationDate: Date(timeIntervalSinceNow: -100 * 86_400)], ofItemAtPath: file.path)
         }
-        let cleaner = CleanupService(trashItem: { _ in XCTFail("Beta must never call cache Trash") })
+        let reports = CacheScanner().scan(homeDirectory: home)
+        XCTAssertEqual(reports.count, CacheScanner.defaultRules.count)
+        XCTAssertEqual(reports.flatMap(\.candidates).count, CacheScanner.defaultRules.count)
+        let cleaner = CleanupService(trashItem: { source in
+            try manager.moveItem(at: source, to: trash.appendingPathComponent(source.lastPathComponent))
+        })
         let result = cleaner.moveToTrash(reports: reports, homeDirectory: home,
             runningBundleIdentifiers: Set(CacheScanner.defaultRules.flatMap(\.relatedBundleIdentifiers)),
             confirmedRunningRuleIDs: Set(CacheScanner.defaultRules.map(\.id)))
+        XCTAssertEqual(result.movedFiles, CacheScanner.defaultRules.count)
+        XCTAssertEqual(result.originalBytes, Int64(CacheScanner.defaultRules.count * 3))
+        XCTAssertTrue(result.failures.isEmpty)
+        for candidate in reports.flatMap(\.candidates) {
+            XCTAssertFalse(manager.fileExists(atPath: candidate.url.path))
+            XCTAssertTrue(manager.fileExists(atPath: trash.appendingPathComponent(candidate.url.lastPathComponent).path))
+        }
+    }
+
+    func testForceConfirmationCannotBypassProtectedFilesAndDirectories() throws {
+        let manager = FileManager.default
+        let home = manager.temporaryDirectory.appendingPathComponent("MSG-protected-\(UUID().uuidString)", isDirectory: true)
+        try manager.createDirectory(at: home, withIntermediateDirectories: true)
+        defer { try? manager.removeItem(at: home) }
+        let oldDate = Date(timeIntervalSinceNow: -100 * 86_400)
+        let rule = CacheRule(id: "test", displayName: "Test", relativePath: "Library/Caches/TestCache", minimumAgeDays: 7, relatedBundleIdentifiers: ["org.example.running"])
+        let root = home.appendingPathComponent(rule.relativePath, isDirectory: true)
+        try manager.createDirectory(at: root, withIntermediateDirectories: true)
+        for name in CacheScanner.protectedFileNames {
+            let file = root.appendingPathComponent(name)
+            XCTAssertTrue(manager.createFile(atPath: file.path, contents: Data([1])))
+            try manager.setAttributes([.modificationDate: oldDate], ofItemAtPath: file.path)
+        }
+        XCTAssertTrue(CacheScanner().scan(rules: [rule], homeDirectory: home)[0].candidates.isEmpty)
+        var reports: [CacheAreaReport] = []
+        for name in CacheScanner.protectedFileNames {
+            let file = root.appendingPathComponent(name)
+            let modified = try XCTUnwrap(file.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate)
+            let candidate = CacheCandidate(url: file, bytes: 1, modificationDate: modified, ruleID: rule.id, fileIdentity: try XCTUnwrap(FileIdentity(url: file)))
+            reports.append(CacheAreaReport(rule: rule, rootURL: root, cutoffDate: Date(), reclaimableBytes: 1, candidates: [candidate]))
+        }
+        for path in ["Library/Application Support", "Library/Containers", "Library/Logs", "Library/Caches"] {
+            let blockedRule = CacheRule(id: path, displayName: path, relativePath: path, minimumAgeDays: 7)
+            let blockedRoot = home.appendingPathComponent(path, isDirectory: true)
+            try manager.createDirectory(at: blockedRoot, withIntermediateDirectories: true)
+            let file = blockedRoot.appendingPathComponent("protected.bin")
+            XCTAssertTrue(manager.createFile(atPath: file.path, contents: Data([2])))
+            try manager.setAttributes([.modificationDate: oldDate], ofItemAtPath: file.path)
+            let modified = try XCTUnwrap(file.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate)
+            let candidate = CacheCandidate(url: file, bytes: 1, modificationDate: modified, ruleID: blockedRule.id, fileIdentity: try XCTUnwrap(FileIdentity(url: file)))
+            reports.append(CacheAreaReport(rule: blockedRule, rootURL: blockedRoot, cutoffDate: Date(), reclaimableBytes: 1, candidates: [candidate]))
+        }
+        let cleaner = CleanupService(trashItem: { _ in XCTFail("Protected paths must not reach Trash") })
+        let result = cleaner.moveToTrash(reports: reports, homeDirectory: home, runningBundleIdentifiers: ["org.example.running"], confirmedRunningRuleIDs: Set(reports.map(\.rule.id)))
         XCTAssertEqual(result.movedFiles, 0)
-        XCTAssertEqual(result.originalBytes, 0)
         XCTAssertEqual(result.failures.count, reports.count)
-        XCTAssertTrue(result.failures.allSatisfy { $0.contains(ReleasePolicy.cacheReadOnlyExplanation) })
-        XCTAssertEqual(try Data(contentsOf: file), Data([1, 2, 3]))
-        XCTAssertTrue(cleaner.moveToTrash(reports: []).failures.isEmpty)
+        XCTAssertTrue(reports.flatMap(\.candidates).allSatisfy { manager.fileExists(atPath: $0.url.path) })
     }
 
     func testParsesSwapUsage() {
@@ -64,7 +111,7 @@ final class MacSpaceGuardCoreTests: XCTestCase {
         XCTAssertFalse(scanner.isSafeDescendant(sibling, of: root))
     }
 
-    func testCustomCutoffAndBetaCacheReadOnlyProtection() throws {
+    func testCustomCutoffAndRunningAppProtection() throws {
         let fileManager = FileManager.default
         let temporary = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let cache = temporary.appendingPathComponent("Library/Caches/TestCache", isDirectory: true)
@@ -111,11 +158,9 @@ final class MacSpaceGuardCoreTests: XCTestCase {
             runningBundleIdentifiers: ["com.example.running"],
             confirmedRunningRuleIDs: [rule.id]
         )
-        XCTAssertEqual(forced.movedFiles, 0)
-        XCTAssertEqual(forced.originalBytes, 0)
-        XCTAssertTrue(forced.failures.first?.contains(ReleasePolicy.cacheReadOnlyExplanation) == true)
-        XCTAssertTrue(fileManager.fileExists(atPath: file.path))
-        XCTAssertFalse(fileManager.fileExists(atPath: fakeTrash.appendingPathComponent(file.lastPathComponent).path))
+        XCTAssertEqual(forced.movedFiles, 1)
+        XCTAssertFalse(fileManager.fileExists(atPath: file.path))
+        XCTAssertTrue(fileManager.fileExists(atPath: fakeTrash.appendingPathComponent(file.lastPathComponent).path))
     }
 
     func testLogsAreHardBlockedAndRunningRulesBecomeHighRisk() {
@@ -237,7 +282,7 @@ final class MacSpaceGuardCoreTests: XCTestCase {
         XCTAssertTrue(manager.fileExists(atPath: file.path))
     }
 
-    func testBetaCacheReadOnlyAlsoRejectsReplacementWithSameSizeAndDate() throws {
+    func testCacheCleanupRejectsReplacementWithSameSizeAndDate() throws {
         let manager = FileManager.default
         let home = manager.temporaryDirectory.appendingPathComponent("MSG-identity-\(UUID().uuidString)", isDirectory: true)
         let root = home.appendingPathComponent("Library/Caches/TestCache", isDirectory: true)

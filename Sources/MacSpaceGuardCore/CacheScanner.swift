@@ -1,6 +1,8 @@
 import Foundation
 
 public struct CacheScanner {
+    /// Never offered or moved, even when a caller explicitly confirms a running app.
+    public static let protectedFileNames: Set<String> = [".DS_Store", "salt", "index", "the-real-index"]
     public static let defaultRules: [CacheRule] = [
         CacheRule(id: "chatcut-updater", displayName: "ChatCut 更新缓存", relativePath: "Library/Caches/chatcut-desktop-updater", minimumAgeDays: 7, relatedBundleIdentifiers: ["io.chatcut.desktop"], riskLevel: .low, riskReason: "旧版更新下载文件；删除后可能需要重新下载更新。"),
         CacheRule(id: "chatcut-shipit", displayName: "ChatCut 安装残留", relativePath: "Library/Caches/io.chatcut.desktop.ShipIt", minimumAgeDays: 7, relatedBundleIdentifiers: ["io.chatcut.desktop"], riskLevel: .caution, riskReason: "安装过程残留；先确认 ChatCut 已完成安装且没有正在更新。"),
@@ -65,7 +67,7 @@ public struct CacheScanner {
                   values.isSymbolicLink != true,
                   values.isRegularFile == true,
                   let fileIdentity = FileIdentity(url: fileURL),
-                  ![".DS_Store", "salt", "index", "the-real-index"].contains(fileURL.lastPathComponent),
+                  !Self.protectedFileNames.contains(fileURL.lastPathComponent),
                   let modified = values.contentModificationDate,
                   modified < cutoff else {
                 continue

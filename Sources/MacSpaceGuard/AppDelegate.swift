@@ -84,7 +84,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             addInfo("估算内存使用：\(format(UInt64(snapshot.estimatedUsedMemory))) / \(format(snapshot.totalMemory))", to: menu)
             addInfo("交换空间：\(snapshot.swapUsed.map(format) ?? "不可用")", to: menu)
             addInfo("磁盘剩余：\(format(snapshot.availableDisk))", to: menu)
-            addInfo("旧缓存统计（只读）：\(format(reclaimableBytes))", to: menu)
+            addInfo("待审核旧缓存：\(format(reclaimableBytes))", to: menu)
             addInfo("上次检查：\(DateFormatter.localizedString(from: snapshot.date, dateStyle: .none, timeStyle: .short))", to: menu)
         } else {
             addInfo("尚未检查", to: menu)
@@ -93,7 +93,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(.separator())
         menu.addItem(withTitle: "立即检查", action: #selector(runManualCheck), keyEquivalent: "r").target = self
 
-        let cleanItem = menu.addItem(withTitle: "资源库缓存查看", action: #selector(openCacheManager), keyEquivalent: "")
+        let cleanItem = menu.addItem(withTitle: "资源库缓存管理", action: #selector(openCacheManager), keyEquivalent: "")
         cleanItem.target = self
         menu.addItem(withTitle: "清理下载的安装包", action: #selector(openInstallerManager), keyEquivalent: "").target = self
         let intervalItem = NSMenuItem(title: "自动检查间隔：每 \(intervalHours) 小时", action: nil, keyEquivalent: "")
@@ -145,6 +145,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if cacheManager == nil {
             cacheManager = CacheManagerWindowController(onClose: { [weak self] in
                 self?.returnToMenuBarIfNoWindows()
+            }, onCleanup: { [weak self] in
+                self?.checkNow(showCompletionAlert: false)
             })
         }
         NSApp.setActivationPolicy(.regular)
@@ -198,7 +200,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 if showCompletionAlert {
                     let alert = NSAlert()
                     alert.messageText = "检查完成"
-                    alert.informativeText = "磁盘剩余 \(self.format(currentSnapshot.availableDisk))，旧缓存统计约 \(self.format(self.reclaimableBytes))。\(ReleasePolicy.cacheReadOnlyExplanation)"
+                    alert.informativeText = "磁盘剩余 \(self.format(currentSnapshot.availableDisk))，待审核旧缓存约 \(self.format(self.reclaimableBytes))。清理前需逐项核对，扫描不会自动移动文件。"
                     alert.runModal()
                 }
             }
@@ -263,7 +265,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func showAbout() {
         let alert = NSAlert()
         alert.messageText = "MSG \(ReleasePolicy.version)（公开测试版）"
-        alert.informativeText = "每 \(intervalHours) 小时在本机检查内存状态、交换空间和磁盘余量，不会上传扫描结果。\n\n\(ReleasePolicy.cacheReadOnlyExplanation)\n下载安装包可逐项选择并确认后移到废纸篓；MSG 不会清空废纸篓，也不会直接释放运行内存。\n\n仅面向 M 系列 Mac；另一台 Mac 及最低系统兼容性尚未验证。此包为临时签名，未经 Apple 公证。"
+        alert.informativeText = "每 \(intervalHours) 小时在本机检查内存状态、交换空间和磁盘余量，不会上传扫描结果。\n\n\(ReleasePolicy.cacheSafetyExplanation)\n缓存和下载安装包均只移到废纸篓；MSG 不会清空废纸篓，也不会直接释放运行内存。清空前可尝试恢复，但恢复不保证撤销已发生的异常。\n\n仅面向 M 系列 Mac；另一台 Mac 及最低系统兼容性尚未验证。此包为临时签名，未经 Apple 公证。"
         alert.runModal()
     }
 

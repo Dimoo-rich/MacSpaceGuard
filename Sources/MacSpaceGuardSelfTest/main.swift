@@ -121,10 +121,10 @@ do {
     )
     let refreshedReports = scanner.scan(rules: [rule], homeDirectory: temporary)
     let cleanup = cleaner.moveToTrash(reports: refreshedReports, homeDirectory: temporary)
-    try require(cleanup.movedFiles == 0 && cleanup.originalBytes == 0, "公开测试版不应移动缓存")
-    try require(cleanup.failures.first?.contains(ReleasePolicy.cacheReadOnlyExplanation) == true, "未说明缓存只读限制")
-    try require(fileManager.fileExists(atPath: oldFile.path), "公开测试版移动了旧缓存")
-    try require(!fileManager.fileExists(atPath: fakeTrash.appendingPathComponent(oldFile.lastPathComponent).path), "缓存进入了模拟废纸篓")
+    try require(cleanup.movedFiles == 1, "移动文件数量错误")
+    try require(cleanup.originalBytes == 128, "移动文件原大小统计错误")
+    try require(!fileManager.fileExists(atPath: oldFile.path), "旧文件没有移出缓存目录")
+    try require(fileManager.fileExists(atPath: fakeTrash.appendingPathComponent(oldFile.lastPathComponent).path), "旧文件没有进入模拟废纸篓")
     try require(fileManager.fileExists(atPath: recentFile.path), "错误删除了新文件")
 
     let forceFile = cache.appendingPathComponent("force.bin")
@@ -147,9 +147,43 @@ do {
         runningBundleIdentifiers: ["com.example.running"],
         confirmedRunningRuleIDs: [protectedRule.id]
     )
-    try require(forced.movedFiles == 0 && fileManager.fileExists(atPath: forceFile.path), "额外确认不应绕过测试版缓存只读限制")
-    try require(!fileManager.fileExists(atPath: fakeTrash.appendingPathComponent(forceFile.lastPathComponent).path), "运行中缓存进入了模拟废纸篓")
+    try require(forced.movedFiles == 1 && !fileManager.fileExists(atPath: forceFile.path), "明确确认的运行中缓存没有移出")
+    try require(fileManager.fileExists(atPath: fakeTrash.appendingPathComponent(forceFile.lastPathComponent).path), "运行中缓存没有进入模拟废纸篓")
     try require(fileManager.fileExists(atPath: recentFile.path), "错误移动了未到期文件")
+
+    // Even explicitly confirmed running-app cleanup cannot move cache indexes or metadata.
+    for name in CacheScanner.protectedFileNames {
+        let file = cache.appendingPathComponent(name)
+        try require(fileManager.createFile(atPath: file.path, contents: Data([1])), "无法创建保护文件测试")
+        try fileManager.setAttributes([.modificationDate: Date(timeIntervalSinceNow: -20 * 86_400)], ofItemAtPath: file.path)
+        let modified = try file.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate!
+        let candidate = CacheCandidate(url: file, bytes: 1, modificationDate: modified, ruleID: protectedRule.id, fileIdentity: FileIdentity(url: file)!)
+        let report = CacheAreaReport(rule: protectedRule, rootURL: scanner.safeRoot(for: protectedRule, homeDirectory: temporary)!, cutoffDate: Date(), reclaimableBytes: 1, candidates: [candidate])
+        let result = cleaner.moveToTrash(reports: [report], homeDirectory: temporary, runningBundleIdentifiers: ["com.example.running"], confirmedRunningRuleIDs: [protectedRule.id])
+        try require(result.movedFiles == 0 && fileManager.fileExists(atPath: file.path), "强制确认绕过了索引文件保护")
+    }
+    for path in ["Library/Application Support", "Library/Containers", "Library/Logs", "Library/Caches"] {
+        let forbiddenRule = CacheRule(id: path, displayName: path, relativePath: path, minimumAgeDays: 7)
+        try require(scanner.safeRoot(for: forbiddenRule, homeDirectory: temporary) == nil, "允许了禁止处理的整目录")
+    }
+
+    let defaultHome = temporary.appendingPathComponent("DefaultRulesFixture", isDirectory: true)
+    for defaultRule in CacheScanner.defaultRules {
+        let root = defaultHome.appendingPathComponent(defaultRule.relativePath, isDirectory: true)
+        try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
+        let file = root.appendingPathComponent("default-\(defaultRule.id).bin")
+        try require(fileManager.createFile(atPath: file.path, contents: Data([1, 2, 3])), "无法创建默认规则测试文件")
+        try fileManager.setAttributes([.modificationDate: Date(timeIntervalSinceNow: -100 * 86_400)], ofItemAtPath: file.path)
+    }
+    let defaultReports = scanner.scan(homeDirectory: defaultHome)
+    try require(defaultReports.flatMap(\.candidates).count == CacheScanner.defaultRules.count, "默认规则扫描范围错误")
+    let defaultResult = cleaner.moveToTrash(reports: defaultReports, homeDirectory: defaultHome,
+        runningBundleIdentifiers: Set(CacheScanner.defaultRules.flatMap(\.relatedBundleIdentifiers)),
+        confirmedRunningRuleIDs: Set(CacheScanner.defaultRules.map(\.id)))
+    try require(defaultResult.movedFiles == CacheScanner.defaultRules.count && defaultResult.failures.isEmpty, "默认缓存规则仍被错误地限制为只读")
+    for candidate in defaultReports.flatMap(\.candidates) {
+        try require(!fileManager.fileExists(atPath: candidate.url.path) && fileManager.fileExists(atPath: fakeTrash.appendingPathComponent(candidate.url.lastPathComponent).path), "默认规则测试文件未进入模拟废纸篓")
+    }
 
     // All destructive checks below use files created inside this test's own
     // UUID-named temporary directory; no real Library or Downloads is touched.

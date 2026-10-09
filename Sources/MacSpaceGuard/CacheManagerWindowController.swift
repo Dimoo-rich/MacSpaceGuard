@@ -7,18 +7,23 @@ private final class FlippedCacheListView: NSView {
 
 final class CacheManagerWindowController: NSWindowController, NSWindowDelegate {
     private let scanner = CacheScanner()
+    private let cleaner = CleanupService()
     private let rules = CacheScanner.defaultRules
     private let onClose: () -> Void
+    private let onCleanup: () -> Void
     private let cutoffPopup = NSPopUpButton()
     private let cutoffHint = NSTextField(labelWithString: "")
     private var selectedPresetDays = 30
     private var customCutoffDate: Date?
-    private let summaryLabel = NSTextField(wrappingLabelWithString: "先勾选缓存类别并选择时间，再点击“扫描并查看文件”。此测试版不会移动缓存。")
-    private let scanButton = NSButton(title: "扫描并查看文件", target: nil, action: nil)
+    private let summaryLabel = NSTextField(wrappingLabelWithString: "先勾选缓存类别并选择时间，再点击“扫描并选择文件”。")
+    private let scanButton = NSButton(title: "扫描并选择文件", target: nil, action: nil)
+    private let cleanupButton = NSButton(title: "移到废纸篓", target: nil, action: nil)
     private let selectAllButton = NSButton(title: "全选", target: nil, action: nil)
     private let clearAllButton = NSButton(title: "全不选", target: nil, action: nil)
     private var checkboxes: [String: NSButton] = [:]
     private var scannedReports: [CacheAreaReport] = []
+    private var selectedCandidateKeys: Set<String> = []
+    private var hasReviewedSelection = false
     private var busy = false
 
     private let formatter: ByteCountFormatter = {
@@ -28,15 +33,16 @@ final class CacheManagerWindowController: NSWindowController, NSWindowDelegate {
         return formatter
     }()
 
-    init(onClose: @escaping () -> Void) {
+    init(onClose: @escaping () -> Void, onCleanup: @escaping () -> Void) {
         self.onClose = onClose
+        self.onCleanup = onCleanup
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 680, height: 620),
             styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false
         )
-        window.title = "资源库缓存查看（只读）"
+        window.title = "资源库缓存管理"
         window.isReleasedWhenClosed = false
         window.center()
         super.init(window: window)
@@ -65,12 +71,12 @@ final class CacheManagerWindowController: NSWindowController, NSWindowDelegate {
     private func buildInterface(in window: NSWindow) {
         guard let content = window.contentView else { return }
 
-        let heading = NSTextField(labelWithString: "查看资源库缓存（只读）")
+        let heading = NSTextField(labelWithString: "清理资源库缓存")
         heading.font = .boldSystemFont(ofSize: 20)
         heading.frame = NSRect(x: 20, y: 575, width: 640, height: 29)
         content.addSubview(heading)
 
-        let explanation = NSTextField(wrappingLabelWithString: "① 选缓存类别和时间 → ② 扫描并查看文件。公开测试版仅查看缓存，暂不支持移动；各应用缓存仍需使用验证。下载安装包可在另一个窗口处理。")
+        let explanation = NSTextField(wrappingLabelWithString: "① 选缓存和时间 → ② 扫描并逐文件选择 → ③ 确认移到废纸篓。仅处理下方白名单；运行中应用需额外确认。清空废纸篓后才会腾出空间。")
         explanation.frame = NSRect(x: 20, y: 530, width: 640, height: 42)
         explanation.textColor = .secondaryLabelColor
         content.addSubview(explanation)
@@ -145,8 +151,14 @@ final class CacheManagerWindowController: NSWindowController, NSWindowDelegate {
         scanButton.target = self
         scanButton.action = #selector(scanSelection)
         scanButton.isEnabled = false
-        scanButton.frame = NSRect(x: 435, y: 28, width: 225, height: 32)
+        scanButton.frame = NSRect(x: 290, y: 28, width: 225, height: 32)
         content.addSubview(scanButton)
+
+        cleanupButton.target = self
+        cleanupButton.action = #selector(confirmCleanup)
+        cleanupButton.isEnabled = false
+        cleanupButton.frame = NSRect(x: 525, y: 28, width: 135, height: 32)
+        content.addSubview(cleanupButton)
     }
 
     private func runningBundleIdentifiers() -> Set<String> {
@@ -166,10 +178,13 @@ final class CacheManagerWindowController: NSWindowController, NSWindowDelegate {
 
     @objc private func selectionChanged() {
         scannedReports = []
+        selectedCandidateKeys = []
+        hasReviewedSelection = false
+        cleanupButton.isEnabled = false
         scanButton.isEnabled = checkboxes.values.contains { $0.state == .on }
         summaryLabel.stringValue = scanButton.isEnabled
-            ? "类别或时间已更新。点击“扫描并查看文件”查看文件清单。"
-            : "请先勾选至少一个缓存类别，再点击“扫描并查看文件”。"
+            ? "类别或时间已更新。点击“扫描并选择文件”查看文件清单。"
+            : "请先勾选至少一个缓存类别，再点击“扫描并选择文件”。"
     }
 
     @objc private func selectAllRules() {
@@ -246,6 +261,8 @@ final class CacheManagerWindowController: NSWindowController, NSWindowDelegate {
             return
         }
         setBusy(true)
+        hasReviewedSelection = false
+        cleanupButton.isEnabled = false
         summaryLabel.stringValue = "正在扫描所选缓存；完成后会打开文件清单，不会自动移动文件…"
         let scanner = self.scanner
         DispatchQueue.global(qos: .utility).async { [weak self] in
@@ -253,9 +270,11 @@ final class CacheManagerWindowController: NSWindowController, NSWindowDelegate {
             DispatchQueue.main.async { [weak self] in
                 guard let self else { return }
                 self.scannedReports = reports
+                self.selectedCandidateKeys = []
+                self.hasReviewedSelection = false
                 let count = reports.reduce(0) { $0 + $1.candidates.count }
                 let bytes = reports.reduce(Int64(0)) { $0 + $1.reclaimableBytes }
-                self.summaryLabel.stringValue = "扫描完成：\(count) 个文件，原大小约 \(self.formatter.string(fromByteCount: bytes))。\n文件清单只供查看，不会移动缓存。"
+                self.summaryLabel.stringValue = "扫描完成：\(count) 个文件，原大小约 \(self.formatter.string(fromByteCount: bytes))。\n正在打开文件清单；默认不勾选，需主动选择。"
                 self.setBusy(false)
                 if count > 0 {
                     self.reviewCandidates()
@@ -270,13 +289,114 @@ final class CacheManagerWindowController: NSWindowController, NSWindowDelegate {
         guard !busy, !scannedReports.isEmpty else { return }
         let controller = CacheReviewWindowController(
             reports: scannedReports,
-            runningBundleIdentifiers: runningBundleIdentifiers()
+            runningBundleIdentifiers: runningBundleIdentifiers(),
+            selectedKeys: selectedCandidateKeys
         )
         guard let reviewWindow = controller.window else { return }
         NSApp.runModal(for: reviewWindow)
-        let count = scannedReports.reduce(0) { $0 + $1.candidates.count }
-        let bytes = scannedReports.reduce(Int64(0)) { $0 + $1.reclaimableBytes }
-        summaryLabel.stringValue = "扫描完成：\(count) 个文件，原大小约 \(formatter.string(fromByteCount: bytes))。\n\(ReleasePolicy.cacheReadOnlyExplanation)"
+        guard let selection = controller.appliedSelection else {
+            selectedCandidateKeys = []
+            hasReviewedSelection = false
+            cleanupButton.isEnabled = false
+            summaryLabel.stringValue = "尚未确认文件清单。点击“扫描并选择文件”重新选择；不会移动任何文件。"
+            return
+        }
+        selectedCandidateKeys = selection
+        hasReviewedSelection = true
+        let selected = selectedReports()
+        let count = selected.reduce(0) { $0 + $1.candidates.count }
+        let bytes = selected.reduce(Int64(0)) { $0 + $1.reclaimableBytes }
+        summaryLabel.stringValue = "已选择 \(count) 个文件，原大小约 \(formatter.string(fromByteCount: bytes))。\n现在可点“移到废纸篓”；清空废纸篓后才会腾出空间。"
+        cleanupButton.isEnabled = count > 0
+    }
+
+    private func selectedReports() -> [CacheAreaReport] {
+        scannedReports.compactMap { report in
+            let candidates = report.candidates.filter { selectedCandidateKeys.contains(CacheReviewWindowController.selectionKey(for: $0)) }
+            guard !candidates.isEmpty else { return nil }
+            return CacheAreaReport(
+                rule: report.rule,
+                rootURL: report.rootURL,
+                cutoffDate: report.cutoffDate,
+                reclaimableBytes: candidates.reduce(0) { $0 + $1.bytes },
+                candidates: candidates
+            )
+        }
+    }
+
+    @objc private func confirmCleanup() {
+        guard !busy, hasReviewedSelection, !scannedReports.isEmpty else { return }
+        let reports = selectedReports()
+        let count = reports.reduce(0) { $0 + $1.candidates.count }
+        let bytes = reports.reduce(Int64(0)) { $0 + $1.reclaimableBytes }
+        guard count > 0 else { return }
+        let runningBeforeConfirmation = runningBundleIdentifiers()
+        let details = reports.map { report in
+            let running = !report.rule.relatedBundleIdentifiers.isDisjoint(with: runningBeforeConfirmation)
+            let risk = running ? "高风险·运行中" : report.rule.riskLevel.title
+            return "• [\(risk)] \(report.rule.displayName)：\(report.candidates.count) 个文件，\(formatter.string(fromByteCount: report.reclaimableBytes))\n  \(report.rule.riskReason)"
+        }.joined(separator: "\n")
+        let alert = NSAlert()
+        alert.messageText = "确认将 \(count) 个文件移到废纸篓？"
+        alert.informativeText = "早于 \(DateFormatter.localizedString(from: reports[0].cutoffDate, dateStyle: .medium, timeStyle: .none))，文件原大小共 \(formatter.string(fromByteCount: bytes))。\n\n\(details)\n\n风险等级不是安全保证，移动后仍可能导致应用异常、缓存重建或重新下载。清空废纸篓前可尝试恢复，但恢复不保证撤销已发生的影响。\n若要腾出磁盘空间，还需自行检查并清空废纸篓。请勿在移动期间同时修改或替换所选文件。相关应用仍在运行时，会再次提示风险。"
+        alert.addButton(withTitle: "取消")
+        alert.addButton(withTitle: "移到废纸篓")
+        guard alert.runModal() == .alertSecondButtonReturn else { return }
+
+        let running = runningBundleIdentifiers()
+        let runningReports = reports.filter { !$0.rule.relatedBundleIdentifiers.isDisjoint(with: running) }
+        var confirmedRunningRuleIDs = Set<String>()
+        if !runningReports.isEmpty {
+            let names = runningReports.map { "• \($0.rule.displayName)" }.joined(separator: "\n")
+            let warning = NSAlert()
+            warning.alertStyle = .critical
+            warning.messageText = "相关应用仍在运行。还要移动其缓存吗？"
+            warning.informativeText = "\(names)\n\n即使文件早于所选日期，也可能仍被应用读取或被缓存索引引用。移到废纸篓仍可能导致应用异常、缓存重建或重新下载；要腾出空间还需自行清空废纸篓。建议先退出应用，再重新扫描。"
+            warning.addButton(withTitle: "我先退出应用")
+            warning.addButton(withTitle: "仍要移到废纸篓（强制）")
+            warning.addButton(withTitle: "取消")
+            let choice = warning.runModal()
+            if choice == .alertFirstButtonReturn {
+                showMessage("请先退出相关应用，然后重新扫描并清理。")
+                return
+            }
+            guard choice == .alertSecondButtonReturn else { return }
+            confirmedRunningRuleIDs = Set(runningReports.map(\.rule.id))
+        }
+
+        let latestRunning = runningBundleIdentifiers()
+        let unconfirmedRunning = reports.filter {
+            !$0.rule.relatedBundleIdentifiers.isDisjoint(with: latestRunning) &&
+            !confirmedRunningRuleIDs.contains($0.rule.id)
+        }
+        guard unconfirmedRunning.isEmpty else {
+            showMessage("确认后又有相关应用启动。为避免未经确认就移动运行中的缓存，本次操作已取消；请重新扫描。")
+            return
+        }
+        setBusy(true)
+        summaryLabel.stringValue = "正在将所选缓存移到废纸篓…"
+        let cleaner = self.cleaner
+        let confirmedRuleIDs = confirmedRunningRuleIDs
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            let result = cleaner.moveToTrash(
+                reports: reports,
+                runningBundleIdentifiers: latestRunning,
+                confirmedRunningRuleIDs: confirmedRuleIDs
+            )
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                self.scannedReports = []
+                self.selectedCandidateKeys = []
+                self.hasReviewedSelection = false
+                self.setBusy(false)
+                self.cleanupButton.isEnabled = false
+                self.summaryLabel.stringValue = "移动结束。若要再次处理，请重新扫描。"
+                self.onCleanup()
+                self.showMessage("已将 \(result.movedFiles) 个文件移到废纸篓（原大小 \(self.formatter.string(fromByteCount: result.originalBytes))）。\n如需腾出磁盘空间，请自行检查并清空废纸篓。" +
+                    (confirmedRuleIDs.isEmpty ? "" : "\n相关应用仍在运行，建议退出并检查应用是否正常。") +
+                    (result.failures.isEmpty ? "" : "\n跳过或失败：\(result.failures.count) 个文件。\n" + result.failures.prefix(5).joined(separator: "\n")))
+            }
+        }
     }
 
     private func setBusy(_ value: Bool) {
@@ -285,12 +405,13 @@ final class CacheManagerWindowController: NSWindowController, NSWindowDelegate {
         selectAllButton.isEnabled = !value
         clearAllButton.isEnabled = !value
         cutoffPopup.isEnabled = !value
+        cleanupButton.isEnabled = !value && hasReviewedSelection && !selectedCandidateKeys.isEmpty
         refreshRunningRules()
     }
 
     private func showMessage(_ message: String) {
         let alert = NSAlert()
-        alert.messageText = "资源库缓存查看（只读）"
+        alert.messageText = "资源库缓存管理"
         alert.informativeText = message
         alert.runModal()
     }

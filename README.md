@@ -2,6 +2,12 @@
 
 [中文](#中文说明) · [English](#english)
 
+> **下载 / Download：** [MSG 1.0.0-beta.2 · M 系列 Mac 安装包（DMG）](https://github.com/Dimoo-rich/MacSpaceGuard/releases/download/v1.0.0-beta.2/MSG-1.0.0-beta.2-AppleSilicon.dmg)
+>
+> **公开测试版 / Public beta，非稳定版。** 仅 Apple Silicon，中文界面；未经 Apple 公证，另一台 Mac 与最低系统尚未实测。首次安装请先阅读[中文安装说明](docs/INSTALL.md) / [English installation guide](docs/INSTALL.en.md)。
+>
+> [发布说明与附件 / Release & assets](https://github.com/Dimoo-rich/MacSpaceGuard/releases/tag/v1.0.0-beta.2) · [SHA256 校验文件](https://github.com/Dimoo-rich/MacSpaceGuard/releases/download/v1.0.0-beta.2/SHA256.txt) · [反馈问题 / Report an issue](https://github.com/Dimoo-rich/MacSpaceGuard/issues)
+
 ## 中文说明
 
 MSG 是一个轻量、完全本地运行的 macOS 菜单栏工具，用来查看内存与磁盘状态、管理白名单旧缓存，以及整理下载的安装包。
@@ -19,7 +25,7 @@ MSG 是一个轻量、完全本地运行的 macOS 菜单栏工具，用来查看
 
 ### 下载与安装
 
-到 [Releases](https://github.com/Dimoo-rich/MacSpaceGuard/releases) 查找 **1.0.0-beta.2 / Pre-release** 的 DMG 附件。若没有 DMG，表示下载版尚未发布。GitHub 自动生成的 **Source code** 压缩包不是安装包。
+**1.0.0-beta.2 公开测试版已发布。** 点击页面顶部的 DMG 下载入口，或前往[此版本的发布页](https://github.com/Dimoo-rich/MacSpaceGuard/releases/tag/v1.0.0-beta.2)，下载 `MSG-1.0.0-beta.2-AppleSilicon.dmg`。GitHub 自动生成的 **Source code** 压缩包不是安装包。
 
 此版本仅临时本地签名，**未经 Developer ID 签名或 Apple 公证**，首次打开可能被 macOS 阻止；不保证每台 Mac 都能授权打开。请先阅读[安装说明](docs/INSTALL.md)，不要关闭系统安全保护。
 
@@ -49,7 +55,7 @@ MSG is a lightweight, local-only macOS menu bar app for monitoring memory and di
 - Installer selection starts empty; all/none controls only change selection. Explicit confirmation is required to move files to Trash. MSG never uninstalls apps or empties Trash.
 - No automatic uploads of files or findings.
 
-Look for the beta DMG in [Releases](https://github.com/Dimoo-rich/MacSpaceGuard/releases). No DMG means it has not been published yet. GitHub's **Source code** archives are not installers. The build uses ad-hoc signing without Developer ID or Apple notarization and may be blocked on first launch. Read the [installation guide](docs/INSTALL.en.md).
+**The 1.0.0-beta.2 public beta is available.** Use the DMG download link at the top of this page, or download `MSG-1.0.0-beta.2-AppleSilicon.dmg` from [this release](https://github.com/Dimoo-rich/MacSpaceGuard/releases/tag/v1.0.0-beta.2). GitHub's **Source code** archives are not installers. The build uses ad-hoc signing without Developer ID or Apple notarization and may be blocked on first launch. Read the [installation guide](docs/INSTALL.en.md).
 
 Bundle-ID matches do not establish installer authenticity or provenance. Not-found does not prove never-installed. Cache risk labels do not guarantee safety; real-app, offline and rebuild effects remain unverified. Do not concurrently modify selected cache files or installers: identity/size/date checks are not atomic with the system Trash operation. Moving to Trash does not immediately free space; users decide whether and when to empty it. Recovery cannot guarantee undoing prior effects.
 

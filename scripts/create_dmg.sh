@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR=${0:A:h}
 PROJECT_DIR=${SCRIPT_DIR:h}
-APP_DIR="$PROJECT_DIR/dist/.build/MacSpaceGuard.app"
+APP_DIR="$PROJECT_DIR/dist/.build.noindex/MacSpaceGuard.app"
 DMG_PATH="$PROJECT_DIR/dist/MacSpaceGuard.dmg"
 STAGING_DIR=$(mktemp -d)
 trap 'rm -rf "$STAGING_DIR"' EXIT

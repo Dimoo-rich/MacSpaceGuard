@@ -1,6 +1,42 @@
 import Foundation
 import MacSpaceGuardCore
 
+if CommandLine.arguments.count == 3 && ["--probe-instance-lock", "--hold-instance-lock"].contains(CommandLine.arguments[1]) {
+    do {
+        let lock = ProcessInstanceLock()
+        guard try lock.acquire(at: URL(fileURLWithPath: CommandLine.arguments[2])) else { exit(2) }
+        if CommandLine.arguments[1] == "--hold-instance-lock" {
+            print("locked")
+            fflush(stdout)
+            // The parent terminates this isolated test process after its ready signal.
+            try await Task.sleep(nanoseconds: 30_000_000_000)
+        }
+        withExtendedLifetime(lock) { exit(0) }
+    } catch { exit(3) }
+}
+
+if CommandLine.arguments.contains("--test-instance") {
+    do { try runInstanceSelfTests(); exit(0) }
+    catch { fputs("Instance self-test failed: \(error)\n", stderr); exit(1) }
+}
+
+if CommandLine.arguments.contains("--check-updates") {
+    do {
+        let update = try await UpdateChecker().check(currentVersion: ReleasePolicy.version, channel: .includingPrereleases)
+        print(update.map { "Available update: \($0.version) — \($0.releaseURL.absoluteString)" }
+              ?? "No newer downloadable release than \(ReleasePolicy.version)")
+        exit(0)
+    } catch {
+        fputs("Update check failed: \(error.localizedDescription)\n", stderr)
+        exit(1)
+    }
+}
+
+if CommandLine.arguments.contains("--test-updates") {
+    do { try await runUpdateSelfTests(); exit(0) }
+    catch { fputs("Update self-test failed: \(error)\n", stderr); exit(1) }
+}
+
 if CommandLine.arguments.contains("--scan-home") {
     let formatter = ByteCountFormatter()
     formatter.countStyle = .file
@@ -36,11 +72,13 @@ enum SelfTestError: Error, CustomStringConvertible {
     }
 }
 
-func require(_ condition: @autoclosure () -> Bool, _ message: String) throws {
-    guard condition() else { throw SelfTestError.failed(message) }
+func require(_ condition: @autoclosure () throws -> Bool, _ message: String) throws {
+    guard try condition() else { throw SelfTestError.failed(message) }
 }
 
 do {
+    try runInstanceSelfTests()
+    try await runUpdateSelfTests()
     let parsed = SystemMonitor.parseSwapUsage(
         "total = 8192.00M  used = 3177.50M  free = 5014.50M"
     )

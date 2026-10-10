@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR=${0:A:h}
 PROJECT_DIR=${SCRIPT_DIR:h}
-APP_DIR="$PROJECT_DIR/dist/.build/MacSpaceGuard.app"
+APP_DIR="$PROJECT_DIR/dist/.build.noindex/MacSpaceGuard.app"
 ZIP_PATH="$PROJECT_DIR/dist/MacSpaceGuard.zip"
 
 if [[ ! -d "$APP_DIR" ]]; then

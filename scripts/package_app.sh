@@ -5,7 +5,8 @@ SCRIPT_DIR=${0:A:h}
 PROJECT_DIR=${SCRIPT_DIR:h}
 BUILD_CONFIGURATION=${BUILD_CONFIGURATION:-release}
 DIST_DIR="$PROJECT_DIR/dist"
-APP_DIR="$DIST_DIR/.build/MacSpaceGuard.app"
+# Keep generated bundles out of ordinary Spotlight directory indexing.
+APP_DIR="$DIST_DIR/.build.noindex/MacSpaceGuard.app"
 
 cd "$PROJECT_DIR"
 mkdir -p "$PROJECT_DIR/work/clang-module-cache" "$PROJECT_DIR/work/swiftpm-module-cache"

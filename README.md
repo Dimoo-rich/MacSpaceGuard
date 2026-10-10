@@ -10,9 +10,9 @@
 
 ## 中文说明
 
-MSG 是一个轻量、完全本地运行的 macOS 菜单栏工具，用来查看内存与磁盘状态、管理白名单旧缓存，以及整理下载的安装包。
+MSG 是一个轻量的 macOS 菜单栏工具，用来查看内存与磁盘状态、管理白名单旧缓存，以及整理下载的安装包。扫描与文件处理在本机进行；开发中的新版增加可选联网更新查询。
 
-**当前构建：1.0.0-beta.2（公开测试版，不是稳定版）。** 目标为 Apple Silicon（M 系列）Mac，界面为中文，不支持 Intel。编译最低版本为 macOS 13，但最低系统和另一台 Mac 尚未实测；请勿将此理解为已验证的 macOS 13+ 兼容性承诺。
+**公开下载：1.0.0-beta.2（公开测试版，不是稳定版）。本地开发构建：1.0.0-beta.3，尚未发布。** 目标为 Apple Silicon（M 系列）Mac，界面为中文，不支持 Intel。编译最低版本为 macOS 13，但最低系统和另一台 Mac 尚未实测；请勿将此理解为已验证的 macOS 13+ 兼容性承诺。
 
 ### 功能与本次范围
 
@@ -28,6 +28,10 @@ MSG 是一个轻量、完全本地运行的 macOS 菜单栏工具，用来查看
 **1.0.0-beta.2 公开测试版已发布。** 点击页面顶部的 DMG 下载入口，或前往[此版本的发布页](https://github.com/Dimoo-rich/MacSpaceGuard/releases/tag/v1.0.0-beta.2)，下载 `MSG-1.0.0-beta.2-AppleSilicon.dmg`。GitHub 自动生成的 **Source code** 压缩包不是安装包。
 
 此版本仅临时本地签名，**未经 Developer ID 签名或 Apple 公证**，首次打开可能被 macOS 阻止；不保证每台 Mac 都能授权打开。请先阅读[安装说明](docs/INSTALL.md)，不要关闭系统安全保护。
+
+### 检查更新（本地 beta.3 起，尚未公开发布）
+
+新增“检查更新”、可选的每日检查（默认关闭）和正式版/测试版频道。发现新版展示更新说明，再由用户去官方发布页下载替换；不自动安装。网络失败不影响扫描清理。旧 beta.2 用户需先手动下载安装一次新版本。详见 [更新说明](docs/UPDATES.md) 与 [隐私说明](docs/PRIVACY.md)。
 
 ### 风险与边界
 
@@ -45,15 +49,17 @@ MSG 是一个轻量、完全本地运行的 macOS 菜单栏工具，用来查看
 
 ## English
 
-MSG is a lightweight, local-only macOS menu bar app for monitoring memory and disk space, managing allowlisted caches, and organizing downloaded installers.
+MSG is a lightweight macOS menu bar app for monitoring memory and disk space, managing allowlisted caches, and organizing downloaded installers. Scanning and file operations are local; the development build adds optional online update checking.
 
-**Current build: 1.0.0-beta.2 (public beta, not stable).** Apple Silicon only; Chinese UI. The build deployment minimum is macOS 13, but the oldest OS and a second Mac remain untested. This is not a verified macOS 13+ compatibility promise.
+**Public download: 1.0.0-beta.2 (public beta, not stable). Local development build: 1.0.0-beta.3, not yet published.** Apple Silicon only; Chinese UI. The build deployment minimum is macOS 13, but the oldest OS and a second Mac remain untested. This is not a verified macOS 13+ compatibility promise.
 
 - Scheduled checks every 1, 3, 6 or 12 hours (default: 6) only report findings.
 - Cache files start unselected. Review their paths and risk reasons, explicitly select files (or all), then confirm moving to Trash. Running-app caches require an additional explicit confirmation; force-moving never bypasses protected paths or file validation.
 - Installer scanning reads metadata from first-level regular DMG/PKG files without running installers.
 - Installer selection starts empty; all/none controls only change selection. Explicit confirmation is required to move files to Trash. MSG never uninstalls apps or empties Trash.
 - No automatic uploads of files or findings.
+
+**Starting with the unpublished beta.3 development build:** manual update checks, opt-in daily checks (off by default), and stable/prerelease channels. Release notes are shown before opening the official download page; no automatic downloads or installation. Existing beta.2 users need a manual replacement first. Checks contact GitHub without uploading files or scan results. See [updates](docs/UPDATES.md) and [privacy](docs/PRIVACY.md).
 
 **The 1.0.0-beta.2 public beta is available.** Use the DMG download link at the top of this page, or download `MSG-1.0.0-beta.2-AppleSilicon.dmg` from [this release](https://github.com/Dimoo-rich/MacSpaceGuard/releases/tag/v1.0.0-beta.2). GitHub's **Source code** archives are not installers. The build uses ad-hoc signing without Developer ID or Apple notarization and may be blocked on first launch. Read the [installation guide](docs/INSTALL.en.md).
 
@@ -72,7 +78,7 @@ swift test --disable-sandbox
 ./scripts/create_dmg.sh
 ```
 
-Build output: `dist/.build/MacSpaceGuard.app` and `dist/MacSpaceGuard.dmg`. See [distribution notes](docs/DISTRIBUTION.md).
+Build output: `dist/.build.noindex/MacSpaceGuard.app` and `dist/MacSpaceGuard.dmg`. The `.noindex` directory is build staging, not another installation. Install into Applications, keep old versions as ZIP backups, and archive test bundles after use. See [distribution notes](docs/DISTRIBUTION.md).
 
 ## License
 

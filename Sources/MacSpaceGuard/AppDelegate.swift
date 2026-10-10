@@ -3,6 +3,7 @@ import MacSpaceGuardCore
 import ServiceManagement
 import UserNotifications
 
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let monitor = SystemMonitor()
     private let scanner = CacheScanner()
@@ -20,6 +21,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var snapshot: SystemSnapshot?
     private var reports: [CacheAreaReport] = []
     private var isChecking = false
+    private let updates = UpdateController()
+    private let instanceGuard = SingleInstanceGuard()
 
     private let intervalDefaultsKey = "automaticCheckIntervalHours"
     private let supportedIntervals = [1, 3, 6, 12]
@@ -31,6 +34,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let urgentDiskBytes: Int64 = 12 * 1_024 * 1_024 * 1_024
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        guard instanceGuard.allowLaunch() else {
+            NSApp.terminate(nil)
+            return
+        }
         NSApp.setActivationPolicy(.accessory)
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         setStatusMark(.normal)
@@ -41,10 +48,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         checkNow(showCompletionAlert: false)
 
         scheduleAutomaticChecks()
+        updates.onMenuChange = { [weak self] in self?.rebuildMenu() }
+        updates.start()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
         timer?.invalidate()
+        updates.stop()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -63,14 +73,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func scheduleAutomaticChecks() {
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: TimeInterval(intervalHours * 60 * 60), repeats: true) { [weak self] _ in
-            self?.checkNow(showCompletionAlert: false)
+            Task { @MainActor in self?.checkNow(showCompletionAlert: false) }
         }
         timer?.tolerance = 60
     }
 
     private func rebuildMenu() {
         let menu = NSMenu()
-        let title = NSMenuItem(title: "MacSpaceGuard", action: nil, keyEquivalent: "")
+        let title = NSMenuItem(title: "MacSpaceGuard · \(ReleasePolicy.version)", action: nil, keyEquivalent: "")
         title.isEnabled = false
         menu.addItem(title)
         menu.addItem(.separator())
@@ -113,6 +123,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             loginItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
         }
 
+        menu.addItem(.separator())
+        updates.appendMenuItems(to: menu)
         menu.addItem(.separator())
         menu.addItem(withTitle: "关于与隐私", action: #selector(showAbout), keyEquivalent: "").target = self
         menu.addItem(withTitle: "退出", action: #selector(quit), keyEquivalent: "q").target = self
@@ -265,7 +277,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func showAbout() {
         let alert = NSAlert()
         alert.messageText = "MSG \(ReleasePolicy.version)（公开测试版）"
-        alert.informativeText = "每 \(intervalHours) 小时在本机检查内存状态、交换空间和磁盘余量，不会上传扫描结果。\n\n\(ReleasePolicy.cacheSafetyExplanation)\n缓存和下载安装包均只移到废纸篓；MSG 不会清空废纸篓，也不会直接释放运行内存。清空前可尝试恢复，但恢复不保证撤销已发生的异常。\n\n仅面向 M 系列 Mac；另一台 Mac 及最低系统兼容性尚未验证。此包为临时签名，未经 Apple 公证。"
+        alert.informativeText = "每 \(intervalHours) 小时在本机检查内存状态、交换空间和磁盘余量，不会上传扫描结果。\n\n手动检查更新或启用“每日检查更新”时，连接 GitHub 查询公开版本信息。每日检查默认关闭；不上传文件、文件名或扫描结果。GitHub 会收到普通网络请求（包括 IP 地址）。只提示用户去下载，不自动下载或安装。\n\n\(ReleasePolicy.cacheSafetyExplanation)\n缓存和下载安装包均只移到废纸篓；MSG 不会清空废纸篓，也不会直接释放运行内存。清空前可尝试恢复，但恢复不保证撤销已发生的异常。\n\n仅面向 M 系列 Mac；另一台 Mac 及最低系统兼容性尚未验证。此包为临时签名，未经 Apple 公证。"
         alert.runModal()
     }
 

@@ -10,9 +10,13 @@ Apple Silicon only; Chinese UI. The build deployment minimum is macOS 13, not a 
 
 1. Visit [Releases](https://github.com/Dimoo-rich/MacSpaceGuard/releases), find 1.0.0-beta.2 marked Pre-release. No DMG means it has not been published yet.
 2. Download `MSG-1.0.0-beta.2-AppleSilicon.dmg` and `SHA256.txt`. GitHub's Source code archives are not installers.
-3. Open the DMG and drag MacSpaceGuard to Applications. Quit and back up an existing version before replacing it.
-4. Launch from Applications; controls appear in the menu bar, not the Dock.
+3. Open the DMG and drag MacSpaceGuard to Applications. Quit and keep a ZIP backup of an existing version before replacing it. Do not keep multiple extracted apps running in parallel.
+4. Launch from Applications, not the DMG or Downloads, and eject the DMG after installation. Controls appear in the menu bar, not the Dock. Development and test copies may appear in application searches; keep backups compressed.
 5. Notifications and launch-at-login are optional. Scheduled checks default to six hours and never move files.
+
+## Future updates
+
+The public beta.2 requires manually checking Releases. Locally prepared beta.3 adds manual update checks and opt-in daily notifications; existing users must replace beta.2 once to get this feature. Updates still require quitting/backing up the old app and replacing it through Finder. No automatic installation. See [updates](UPDATES.md).
 
 ## Security prompts
 

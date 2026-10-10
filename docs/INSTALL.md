@@ -2,23 +2,23 @@
 
 [English](INSTALL.en.md)
 
-当前构建为 **1.0.0-beta.2 公开测试版**。另一台 Mac、首次下载打开的系统授权体验和最低系统兼容性尚待验证，不是稳定版。
+当前构建为 **1.0.0-beta.3 公开测试版**。另一台 Mac、首次下载打开的系统授权体验和最低系统兼容性尚待验证，不是稳定版。
 
 ## 适用电脑
 
-仅面向 Apple Silicon（M 系列）Mac，界面为中文，不提供 Intel 版本。编译最低版本为 macOS 13，但没有验证整个 macOS 13+ 范围。本轮本机测试系统和结果见[验收记录](BETA_2_ACCEPTANCE.md)。
+仅面向 Apple Silicon（M 系列）Mac，界面为中文，不提供 Intel 版本。编译最低版本为 macOS 13，但没有验证整个 macOS 13+ 范围。最终 DMG 已在本机安装并确认启动与手动更新查询，但不能代表另一台 Mac 的首次打开授权体验。本轮本机测试系统和结果见[验收记录](BETA_3_ACCEPTANCE.md)。
 
 ## 下载与安装
 
-1. 打开[官方仓库 Releases](https://github.com/Dimoo-rich/MacSpaceGuard/releases)，找到标为 Pre-release 的 1.0.0-beta.2。若没有 DMG，表示尚未发布。
-2. 下载 `MSG-1.0.0-beta.2-AppleSilicon.dmg` 和 `SHA256.txt`。Source code 的 zip/tar.gz 是源码，不是安装包。
-3. 双击 DMG，将 MacSpaceGuard 拖进“应用程序”。若已有旧版，先退出旧版；替换前保留旧版压缩备份。不要同时留着并打开多份解压的应用。
+1. 打开[官方仓库 Releases](https://github.com/Dimoo-rich/MacSpaceGuard/releases)，找到标为 Pre-release 的 1.0.0-beta.3。若没有 DMG，表示尚未发布。
+2. 下载 `MSG-1.0.0-beta.3-AppleSilicon.dmg` 和 `SHA256.txt`。Source code 的 zip/tar.gz 是源码，不是安装包。
+3. 双击 DMG，将 MacSpaceGuard 拖进“应用程序”。若已有旧版，先退出旧版；替换前保留旧版压缩备份，选择“替换”而非“保留两者”。不要同时留着并打开多份解压的应用。
 4. 从“应用程序”打开，不从 DMG 或下载目录直接运行；安装后推出 DMG。入口在屏幕顶部菜单栏，不会在程序坞常驻。开发测试副本可能被系统应用搜索列出，备份建议保留为 ZIP。
 5. 自行决定是否允许通知、登录启动。自动检查默认每 6 小时一次，仅统计，不移动文件。
 
 ## 后续更新
 
-当前公开下载的 beta.2 需到 Releases 手动查看新版。开发中的 beta.3 起提供“检查更新”和可选每日提醒；旧版用户先手动更新一次才能获得该功能。发现新版后仍需退出旧版、保留备份，再下载 DMG 拖入“应用程序”替换；不会自动安装。见 [更新说明](UPDATES.md)。
+beta.3 起提供“检查更新”和可选每日提醒（默认关闭）；beta.2 用户先手动更新一次才能获得该功能。发现新版后仍需退出旧版、保留备份，再下载 DMG 拖入“应用程序”替换；不会自动安装。见 [更新说明](UPDATES.md)。
 
 ## 首次打开的系统提示
 

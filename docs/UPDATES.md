@@ -1,13 +1,13 @@
 # 更新说明 / Updates
 
-此功能从 **1.0.0-beta.3** 起提供；目前为本地准备版，尚未发布。公开下载的 beta.2 没有检查更新功能。老用户必须先手动下载安装一次带此功能的版本，不能通过修改 GitHub 页面给已安装的旧程序添加功能。
+此功能从已公开发布的 **1.0.0-beta.3** 起提供。旧 beta.2 没有检查更新功能。老用户必须先手动下载安装一次带此功能的版本，不能通过修改 GitHub 页面给已安装的旧程序添加功能。
 
 ## 用户如何更新
 
 1. 点菜单栏 MSG 图标，再点“检查更新”。“立即检查”仍是本机内存、磁盘与缓存统计，两者互不替代。
 2. 有新版时，窗口显示当前版本、新版本、正式版/测试版标识与发布者的更新说明。可以点“稍后”；菜单保留“查看更新”入口。
 3. 点“前往下载”打开官方 GitHub 发布页。先看系统要求、安装限制及风险，再下载 M 系列 Mac 的 DMG，不要下载 Source code 当安装包。
-4. 先退出旧版，备份旧应用，再把新版拖入“应用程序”替换，然后打开。可能仍遇到未经公证提示，按 [安装说明](INSTALL.md) 决定是否安装。更新检查并不代表 Apple 已验证该安装包。
+4. 先退出旧版，备份旧应用，再把新版拖入“应用程序”，选择“替换”而非“保留两者”，推出安装盘后打开。备份建议保持 ZIP，不会自动删除其他目录里的旧副本或安装包。可能仍遇到未经公证提示，按 [安装说明](INSTALL.md) 决定是否安装。更新检查并不代表 Apple 已验证该安装包。
 
 ## 每日提醒与频道
 
@@ -26,9 +26,9 @@
 
 ## English
 
-Update checking starts with the locally prepared **1.0.0-beta.3**, not yet published. Existing beta.2 installations require one manual download/replacement before this feature is available.
+Update checking starts with the published **1.0.0-beta.3** public beta. Existing beta.2 installations require one manual download/replacement before this feature is available.
 
-Use **检查更新** (Check for updates) in the menu. Newer downloadable releases show their version, prerelease/full-release status and plain-text release notes. **前往下载** opens the official release page; MSG never downloads, installs or executes updates automatically. Quit and back up the old application before replacing it through Finder. System requirements, ad-hoc signing and first-launch restrictions still apply.
+Use **检查更新** (Check for updates) in the menu. Newer downloadable releases show their version, prerelease/full-release status and plain-text release notes. **前往下载** opens the official release page; MSG never downloads, installs or executes updates automatically. Quit and back up the old application before replacing it through Finder. Choose Replace, not Keep Both, then eject the DMG. Old installers and copies elsewhere are not automatically removed. System requirements, ad-hoc signing and first-launch restrictions still apply.
 
 **每日检查更新** (Daily update checks) is opt-in and off by default. While the app runs, requests are initiated at least 24 hours apart, including failed attempts. Each detected version produces at most one local notification; the menu entry is visible even if system notifications are disabled. Select stable releases only or stable plus prereleases. Fresh beta builds default to both; stable builds default to stable only.
 
